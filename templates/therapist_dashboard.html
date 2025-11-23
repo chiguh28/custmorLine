@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}セラピスト管理画面{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-center">管理ダッシュボード</h2>
+
+<div class="row mb-4">
+    <div class="col-12 col-md-6 mb-3 mb-md-0">
+        <div class="card text-white bg-success">
+            <div class="card-header">今月の売上</div>
+            <div class="card-body">
+                <h3 class="card-title" id="monthly-income">¥0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card text-dark bg-light">
+            <div class="card-header">今月の予約数</div>
+            <div class="card-body">
+                <h3 class="card-title" id="monthly-count">0件</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        コース管理
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>コース名</th>
+                        <th>時間 (分)</th>
+                        <th>料金 (円)</th>
+                        <th>説明</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="course-table">
+                    <!-- Courses will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <button class="btn btn-secondary" onclick="addCourse()">+ コース追加</button>
+            <button class="btn btn-primary" onclick="saveCourses()">変更を保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        シフト管理 (向こう2週間)
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>日付</th>
+                        <th>開始時間</th>
+                        <th>終了時間</th>
+                        <th>ステータス</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-table">
+                    <!-- Schedules will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-primary" onclick="saveSchedules()">変更を保存</button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        予約一覧 (今月)
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>日付</th>
+                        <th>時間</th>
+                        <th>コース</th>
+                        <th>お客様名</th>
+                        <th>料金</th>
+                        <th>ステータス</th>
+                    </tr>
+                </thead>
+                <tbody id="reservation-table">
+                    <!-- Reservations will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        顧客管理
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>LINE ID</th>
+                        <th>顧客名</th>
+                        <th>電話番号</th>
+                        <th>予約回数</th>
+                        <th>最終予約日</th>
+                        <th>出入り禁止/許可</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="customer-table">
+                    <!-- Customers will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 text-center mb-4">
+    <button class="btn btn-secondary" onclick="location.reload()">更新</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

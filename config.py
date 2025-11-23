@@ -7,6 +7,7 @@ class Config:
     # Customer Bot Settings
     LINE_CHANNEL_SECRET_CUSTOMER = os.getenv('LINE_CHANNEL_SECRET_CUSTOMER')
     LINE_CHANNEL_ACCESS_TOKEN_CUSTOMER = os.getenv('LINE_CHANNEL_ACCESS_TOKEN_CUSTOMER')
+    LIFF_ID = os.getenv('LIFF_ID')
 
     # Therapist Bot Settings
     LINE_CHANNEL_SECRET_THERAPIST = os.getenv('LINE_CHANNEL_SECRET_THERAPIST')
@@ -21,6 +22,10 @@ class Config:
     # Broadcast Message Template
     BROADCAST_MESSAGE_TEMPLATE = """
 【出勤情報更新】
-今週のスケジュールをご確認ください✨
+今週のスケジュールを更新しましたので
+ご確認ください✨
 ご予約お待ちしております!
 """
+
+    # Salon Information
+    SALON_LOCATION = os.getenv('SALON_LOCATION', 'プレサンス新栄リベラ1003')

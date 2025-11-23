@@ -1,0 +1,351 @@
+body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background-color: #f8f9fa;
+    padding-bottom: 20px;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.btn-primary {
+    background-color: #06c755;
+    border-color: #06c755;
+}
+
+.btn-primary:hover {
+    background-color: #05b34c;
+    border-color: #05b34c;
+}
+
+/* Course Cards */
+.course-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+}
+
+.course-card:hover {
+    transform: translateY(-2px);
+    border-color: #06c755;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.course-card.selected {
+    border: 2px solid #06c755;
+    background-color: #f0fff4;
+}
+
+/* Calendar Styles */
+.calendar-cell {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 50px;
+    vertical-align: middle;
+    font-size: 1.1rem;
+}
+
+.calendar-cell.available {
+    color: #06c755;
+    font-weight: bold;
+}
+
+.calendar-cell.available:hover {
+    background-color: #e9ecef;
+}
+
+.calendar-cell.selected {
+    background-color: #06c755 !important;
+    color: white !important;
+}
+
+.calendar-cell.disabled {
+    color: #adb5bd;
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-size: 0.9em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Result Overlay */
+#result-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.result-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dashboard specific styles */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Calendar table - ensure all 7 days are visible */
+#calendar-table {
+    min-width: 100%;
+    width: max-content;
+    table-layout: auto;
+}
+
+#calendar-table th,
+#calendar-table td {
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+/* Make the table container scrollable */
+#step2 .table-responsive {
+    position: relative;
+}
+
+/* Responsive Typography */
+h2 {
+    font-size: 1.75rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    h4 {
+        font-size: 1.1rem;
+    }
+
+    /* Course cards - full width on mobile */
+    .course-card {
+        margin-bottom: 15px;
+    }
+
+    /* Calendar adjustments */
+    .calendar-cell {
+        height: 40px;
+        font-size: 0.9rem;
+        padding: 5px 2px;
+    }
+
+    th {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+
+    #calendar-table {
+        font-size: 0.85rem;
+    }
+
+    #calendar-table th,
+    #calendar-table td {
+        min-width: 50px;
+    }
+
+    /* Navigation buttons */
+    #prev-week,
+    #next-week {
+        font-size: 0.85rem;
+        padding: 0.375rem 0.5rem;
+    }
+
+    #current-week-label {
+        font-size: 1rem;
+    }
+
+    /* Form inputs */
+    .form-control {
+        font-size: 16px;
+        /* Prevents zoom on iOS */
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 0.5rem 1rem;
+    }
+
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+    }
+
+    /* Cards */
+    .card {
+        margin-bottom: 15px;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Result overlay */
+    .result-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    /* Dashboard table adjustments */
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem;
+    }
+
+    /* Make small text in tables readable */
+    small {
+        font-size: 0.75rem;
+    }
+
+    /* Editable content in dashboard */
+    [contenteditable="true"] {
+        min-height: 30px;
+        padding: 5px;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        max-width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .calendar-cell {
+        font-size: 1rem;
+    }
+
+    .table {
+        font-size: 0.9rem;
+    }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1140px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .calendar-cell {
+        height: 35px;
+        font-size: 0.8rem;
+    }
+
+    th {
+        font-size: 0.7rem;
+        padding: 5px 2px;
+    }
+}
+
+/* Touch-friendly elements */
+@media (hover: none) and (pointer: coarse) {
+
+    .course-card,
+    .calendar-cell.available,
+    .btn {
+        min-height: 44px;
+        /* iOS recommended touch target size */
+    }
+
+    .calendar-cell {
+        height: 44px;
+    }
+}
+
+/* Print styles */
+@media print {
+
+    .btn,
+    #result-overlay {
+        display: none;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* Accessibility improvements */
+.calendar-cell:focus,
+.course-card:focus,
+.btn:focus {
+    outline: 2px solid #06c755;
+    outline-offset: 2px;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better spacing on mobile */
+@media (max-width: 768px) {
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+}

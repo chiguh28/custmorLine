@@ -3,28 +3,67 @@ import os
 from config import Config
 
 def get_db_connection():
-    conn = sqlite3.connect(Config.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Get database connection - supports both PostgreSQL and SQLite"""
+    if Config.DATABASE_URL and Config.DATABASE_URL.startswith('postgres'):
+        # PostgreSQL connection for Render.com
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        conn = psycopg2.connect(Config.DATABASE_URL, cursor_factory=RealDictCursor)
+        return conn
+    else:
+        # SQLite connection for local development
+        conn = sqlite3.connect(Config.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+def is_postgres():
+    """Check if using PostgreSQL"""
+    return Config.DATABASE_URL and Config.DATABASE_URL.startswith('postgres')
+
+def execute_query(cursor, query, params=None):
+    """Execute query with proper placeholder conversion"""
+    if is_postgres():
+        # Convert ? to %s for PostgreSQL
+        query = query.replace('?', '%s')
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
+
+def dict_row(row):
+    """Convert row to dictionary for both PostgreSQL and SQLite"""
+    if row is None:
+        return None
+    if is_postgres():
+        # PostgreSQL returns tuples, need column names
+        return row
+    else:
+        # SQLite Row object can be accessed like dict
+        return dict(row)
 
 def init_db():
-    if not os.path.exists(os.path.dirname(Config.DB_PATH)):
-        os.makedirs(os.path.dirname(Config.DB_PATH))
+    # Only create directory for SQLite
+    if not is_postgres():
+        if not os.path.exists(os.path.dirname(Config.DB_PATH)):
+            os.makedirs(os.path.dirname(Config.DB_PATH))
 
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Determine auto-increment syntax
+    auto_inc = 'SERIAL PRIMARY KEY' if is_postgres() else 'INTEGER PRIMARY KEY AUTOINCREMENT'
 
     # Friends table (Customer Bot)
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS friends (
             user_id TEXT PRIMARY KEY,
             added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
+            is_active BOOLEAN DEFAULT TRUE
         )
     ''')
 
     # Therapist state table (Therapist Bot)
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS therapist_state (
             user_id TEXT PRIMARY KEY,
             state TEXT,
@@ -33,20 +72,20 @@ def init_db():
     ''')
 
     # Users table (Customer info)
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS users (
             line_user_id TEXT PRIMARY KEY,
             name TEXT,
             phone_number TEXT,
-            is_banned BOOLEAN DEFAULT 0,
+            is_banned BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
     # Courses table
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS courses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {auto_inc},
             name TEXT NOT NULL,
             duration_minutes INTEGER NOT NULL,
             price INTEGER NOT NULL,
@@ -56,28 +95,28 @@ def init_db():
 
     # Schedules table (Therapist availability)
     # status: 'available', 'unavailable', 'booked'
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS schedules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL, -- YYYY-MM-DD
-            start_time TEXT NOT NULL, -- HH:MM
-            end_time TEXT NOT NULL, -- HH:MM
+            id {auto_inc},
+            date TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
             status TEXT DEFAULT 'available',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
     # Reservations table
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS reservations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {auto_inc},
             user_id TEXT NOT NULL,
             course_id INTEGER NOT NULL,
-            reservation_date TEXT NOT NULL, -- YYYY-MM-DD
-            start_time TEXT NOT NULL, -- HH:MM
-            end_time TEXT NOT NULL, -- HH:MM
+            reservation_date TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
             total_price INTEGER NOT NULL,
-            status TEXT DEFAULT 'confirmed', -- confirmed, cancelled
+            status TEXT DEFAULT 'confirmed',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (line_user_id),
             FOREIGN KEY (course_id) REFERENCES courses (id)
@@ -86,13 +125,16 @@ def init_db():
 
     # Seed initial courses if empty
     cursor.execute('SELECT count(*) FROM courses')
-    if cursor.fetchone()[0] == 0:
+    result = cursor.fetchone()
+    count = result[0] if is_postgres() else result[0]
+    
+    if count == 0:
         courses = [
             ('スタンダードコース', 60, 6000, '基本のコースです。'),
             ('ロングコース', 90, 9000, 'ゆったりとしたコースです。'),
             ('ショートコース', 30, 3000, 'お試しのコースです。')
         ]
-        cursor.executemany('INSERT INTO courses (name, duration_minutes, price, description) VALUES (?, ?, ?, ?)', courses)
+        cursor.executemany('INSERT INTO courses (name, duration_minutes, price, description) VALUES (%s, %s, %s, %s)' if is_postgres() else 'INSERT INTO courses (name, duration_minutes, price, description) VALUES (?, ?, ?, ?)', courses)
         print("Seeded initial courses.")
 
     conn.commit()
@@ -103,9 +145,9 @@ def add_friend(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
-            INSERT INTO friends (user_id, is_active) VALUES (?, 1)
-            ON CONFLICT(user_id) DO UPDATE SET is_active=1, added_at=CURRENT_TIMESTAMP
+        execute_query(cursor, '''
+            INSERT INTO friends (user_id, is_active) VALUES (?, TRUE)
+            ON CONFLICT(user_id) DO UPDATE SET is_active=TRUE, added_at=CURRENT_TIMESTAMP
         ''', (user_id,))
         conn.commit()
     finally:
@@ -115,7 +157,7 @@ def remove_friend(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('UPDATE friends SET is_active=0 WHERE user_id = ?', (user_id,))
+        execute_query(cursor, 'UPDATE friends SET is_active=FALSE WHERE user_id = ?', (user_id,))
         conn.commit()
     finally:
         conn.close()
@@ -124,7 +166,7 @@ def get_active_friends():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT user_id FROM friends WHERE is_active=1')
+        execute_query(cursor, 'SELECT user_id FROM friends WHERE is_active=TRUE')
         friends = [row['user_id'] for row in cursor.fetchall()]
         return friends
     finally:
@@ -134,7 +176,7 @@ def set_therapist_state(user_id, state):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
+        execute_query(cursor, '''
             INSERT INTO therapist_state (user_id, state) VALUES (?, ?)
             ON CONFLICT(user_id) DO UPDATE SET state=?, updated_at=CURRENT_TIMESTAMP
         ''', (user_id, state, state))
@@ -146,7 +188,7 @@ def get_therapist_state(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT state FROM therapist_state WHERE user_id = ?', (user_id,))
+        execute_query(cursor, 'SELECT state FROM therapist_state WHERE user_id = ?', (user_id,))
         row = cursor.fetchone()
         return row['state'] if row else None
     finally:
@@ -158,7 +200,7 @@ def get_user(line_user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM users WHERE line_user_id = ?', (line_user_id,))
+        execute_query(cursor, 'SELECT * FROM users WHERE line_user_id = ?', (line_user_id,))
         return cursor.fetchone()
     finally:
         conn.close()
@@ -167,7 +209,7 @@ def upsert_user(line_user_id, name, phone_number):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
+        execute_query(cursor, '''
             INSERT INTO users (line_user_id, name, phone_number) VALUES (?, ?, ?)
             ON CONFLICT(line_user_id) DO UPDATE SET name=?, phone_number=?
         ''', (line_user_id, name, phone_number, name, phone_number))
@@ -179,7 +221,7 @@ def get_courses():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM courses')
+        execute_query(cursor, 'SELECT * FROM courses')
         return cursor.fetchall()
     finally:
         conn.close()
@@ -188,7 +230,7 @@ def get_course(course_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM courses WHERE id = ?', (course_id,))
+        execute_query(cursor, 'SELECT * FROM courses WHERE id = ?', (course_id,))
         return cursor.fetchone()
     finally:
         conn.close()
@@ -198,13 +240,13 @@ def upsert_course(course_id, name, duration, price, description):
     cursor = conn.cursor()
     try:
         if course_id:
-            cursor.execute('''
+            execute_query(cursor, '''
                 UPDATE courses 
                 SET name = ?, duration_minutes = ?, price = ?, description = ?
                 WHERE id = ?
             ''', (name, duration, price, description, course_id))
         else:
-            cursor.execute('''
+            execute_query(cursor, '''
                 INSERT INTO courses (name, duration_minutes, price, description)
                 VALUES (?, ?, ?, ?)
             ''', (name, duration, price, description))
@@ -229,7 +271,7 @@ def get_reservations(start_date=None, end_date=None):
         
         query += ' ORDER BY r.reservation_date, r.start_time'
         
-        cursor.execute(query, params)
+        execute_query(cursor, query, params)
         return cursor.fetchall()
     finally:
         conn.close()
@@ -239,7 +281,7 @@ def get_user_reservations(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
+        execute_query(cursor, '''
             SELECT r.*, c.name as course_name, c.duration_minutes
             FROM reservations r
             JOIN courses c ON r.course_id = c.id
@@ -257,7 +299,7 @@ def create_reservation(user_id, course_id, date, start_time, end_time, total_pri
     cursor = conn.cursor()
     try:
         # Check for conflicts
-        cursor.execute('''
+        execute_query(cursor, '''
             SELECT count(*) FROM reservations 
             WHERE reservation_date = ? 
             AND status = 'confirmed'
@@ -270,7 +312,7 @@ def create_reservation(user_id, course_id, date, start_time, end_time, total_pri
         if cursor.fetchone()[0] > 0:
             return False # Conflict
 
-        cursor.execute('''
+        execute_query(cursor, '''
             INSERT INTO reservations (user_id, course_id, reservation_date, start_time, end_time, total_price)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (user_id, course_id, date, start_time, end_time, total_price))
@@ -285,7 +327,7 @@ def get_monthly_income(year, month):
     try:
         # SQLite strftime('%Y-%m', reservation_date)
         month_str = f"{year}-{month:02d}"
-        cursor.execute('''
+        execute_query(cursor, '''
             SELECT SUM(total_price) FROM reservations 
             WHERE strftime('%Y-%m', reservation_date) = ? AND status = 'confirmed'
         ''', (month_str,))
@@ -298,7 +340,7 @@ def get_therapist_schedules(start_date, end_date):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
+        execute_query(cursor, '''
             SELECT * FROM schedules 
             WHERE date BETWEEN ? AND ?
         ''', (start_date, end_date))
@@ -311,17 +353,17 @@ def upsert_schedule(date, start_time, end_time, status):
     cursor = conn.cursor()
     try:
         # Check if exists
-        cursor.execute('SELECT id FROM schedules WHERE date = ?', (date,))
+        execute_query(cursor, 'SELECT id FROM schedules WHERE date = ?', (date,))
         row = cursor.fetchone()
         
         if row:
-            cursor.execute('''
+            execute_query(cursor, '''
                 UPDATE schedules 
                 SET start_time = ?, end_time = ?, status = ?
                 WHERE date = ?
             ''', (start_time, end_time, status, date))
         else:
-            cursor.execute('''
+            execute_query(cursor, '''
                 INSERT INTO schedules (date, start_time, end_time, status)
                 VALUES (?, ?, ?, ?)
             ''', (date, start_time, end_time, status))
@@ -336,7 +378,7 @@ def get_all_customers():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
+        execute_query(cursor, '''
             SELECT 
                 u.line_user_id,
                 u.name,
@@ -379,7 +421,7 @@ def update_customer(line_user_id, name=None, phone_number=None, is_banned=None):
         params.append(line_user_id)
         query = f"UPDATE users SET {', '.join(updates)} WHERE line_user_id = ?"
         
-        cursor.execute(query, params)
+        execute_query(cursor, query, params)
         conn.commit()
         return cursor.rowcount > 0
     finally:
@@ -391,9 +433,9 @@ def delete_customer(line_user_id):
     cursor = conn.cursor()
     try:
         # Delete reservations first (foreign key constraint)
-        cursor.execute('DELETE FROM reservations WHERE user_id = ?', (line_user_id,))
+        execute_query(cursor, 'DELETE FROM reservations WHERE user_id = ?', (line_user_id,))
         # Delete user
-        cursor.execute('DELETE FROM users WHERE line_user_id = ?', (line_user_id,))
+        execute_query(cursor, 'DELETE FROM users WHERE line_user_id = ?', (line_user_id,))
         conn.commit()
         return True
     except Exception as e:
@@ -407,7 +449,7 @@ def is_customer_banned(line_user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT is_banned FROM users WHERE line_user_id = ?', (line_user_id,))
+        execute_query(cursor, 'SELECT is_banned FROM users WHERE line_user_id = ?', (line_user_id,))
         row = cursor.fetchone()
         return bool(row['is_banned']) if row else False
     finally:

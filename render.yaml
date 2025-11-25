@@ -1,0 +1,36 @@
+services:
+  # Web Service
+  - type: web
+    name: custmorline-bot
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: LINE_CHANNEL_SECRET_CUSTOMER
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN_CUSTOMER
+        sync: false
+      - key: LINE_CHANNEL_SECRET_THERAPIST
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN_THERAPIST
+        sync: false
+      - key: LIFF_ID
+        sync: false
+      - key: SALON_LOCATION
+        value: プレサンス新栄リベラ1003
+      - key: DATABASE_URL
+        fromDatabase:
+          name: custmorline-db
+          property: connectionString
+
+databases:
+  - name: custmorline-db
+    databaseName: custmorline
+    user: custmorline
+    region: singapore
+    plan: free

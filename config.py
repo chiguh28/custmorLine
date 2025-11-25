@@ -13,6 +13,9 @@ class Config:
     LINE_CHANNEL_SECRET_THERAPIST = os.getenv('LINE_CHANNEL_SECRET_THERAPIST')
     LINE_CHANNEL_ACCESS_TOKEN_THERAPIST = os.getenv('LINE_CHANNEL_ACCESS_TOKEN_THERAPIST')
 
+    # Database Settings
+    DATABASE_URL = os.getenv('DATABASE_URL')  # PostgreSQL URL for Render.com
+
     # Paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     STATIC_FOLDER = os.path.join(BASE_DIR, 'static')

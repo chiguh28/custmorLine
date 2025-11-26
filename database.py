@@ -124,9 +124,9 @@ def init_db():
     ''')
 
     # Seed initial courses if empty
-    cursor.execute('SELECT count(*) FROM courses')
+    cursor.execute('SELECT count(*) as count FROM courses')
     result = cursor.fetchone()
-    count = result[0] if is_postgres() else result[0]
+    count = result['count'] if is_postgres() else result[0]
     
     if count == 0:
         courses = [
@@ -300,7 +300,7 @@ def create_reservation(user_id, course_id, date, start_time, end_time, total_pri
     try:
         # Check for conflicts
         execute_query(cursor, '''
-            SELECT count(*) FROM reservations 
+            SELECT count(*) as count FROM reservations 
             WHERE reservation_date = ? 
             AND status = 'confirmed'
             AND (
@@ -309,7 +309,8 @@ def create_reservation(user_id, course_id, date, start_time, end_time, total_pri
             )
         ''', (date, end_time, start_time, start_time, end_time))
         
-        if cursor.fetchone()[0] > 0:
+        result = cursor.fetchone()
+        if (result['count'] if is_postgres() else result[0]) > 0:
             return False # Conflict
 
         execute_query(cursor, '''
@@ -325,14 +326,24 @@ def get_monthly_income(year, month):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # SQLite strftime('%Y-%m', reservation_date)
         month_str = f"{year}-{month:02d}"
-        execute_query(cursor, '''
-            SELECT SUM(total_price) FROM reservations 
-            WHERE strftime('%Y-%m', reservation_date) = ? AND status = 'confirmed'
-        ''', (month_str,))
-        result = cursor.fetchone()[0]
-        return result if result else 0
+        
+        if is_postgres():
+            # PostgreSQL uses TO_CHAR for date formatting
+            execute_query(cursor, '''
+                SELECT SUM(total_price) as total FROM reservations 
+                WHERE TO_CHAR(reservation_date::date, 'YYYY-MM') = ? AND status = 'confirmed'
+            ''', (month_str,))
+        else:
+            # SQLite uses strftime
+            execute_query(cursor, '''
+                SELECT SUM(total_price) as total FROM reservations 
+                WHERE strftime('%Y-%m', reservation_date) = ? AND status = 'confirmed'
+            ''', (month_str,))
+        
+        result = cursor.fetchone()
+        total = result['total'] if is_postgres() else result[0]
+        return total if total else 0
     finally:
         conn.close()
 

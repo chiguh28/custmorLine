@@ -37,6 +37,11 @@ handler_therapist = WebhookHandler(Config.LINE_CHANNEL_SECRET_THERAPIST)
 if not os.path.exists(Config.IMAGE_FOLDER):
     os.makedirs(Config.IMAGE_FOLDER)
 
+# Health check endpoint for Render
+@app.route("/")
+def health_check():
+    return "OK", 200
+
 @app.route("/callback/customer", methods=['POST'])
 def callback_customer():
     signature = request.headers['X-Line-Signature']
